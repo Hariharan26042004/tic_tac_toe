@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe AI</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('https://play-lh.googleusercontent.com/lJYe6h137WigBeBb-uHb4lgNzZqhsKjdDAq8jQTmSZLLWAAkpMtLjbCbcqTUSFQeFA=w1080');
+            background-size: cover;
+            background-position: center;
+            filter: blur(8px);
+            z-index: -1; 
+        }
+
+        .title-container, .message-container {
+            margin-bottom: 20px; 
+            background-color: rgba(255, 255, 255, 0.8); 
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin: 0;
+            color: #333;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        #container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            animation: zoomIn 1s ease-in-out;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 120px);
+            grid-template-rows: repeat(3, 120px);
+            gap: 10px;
+        }
+
+        .cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 120px;
+            height: 120px;
+            font-size: 3em;
+            color: #4a90e2;
+            background-color: #ffffff;
+            cursor: pointer;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, background-color 0.3s ease;
+        }
+
+        .cell:hover {
+            transform: scale(1.1);
+            background-color: #e3f2fd;
+        }
+
+        .cell.strike {
+            background-color: #ff5252 !important;
+            animation: winnerGlow 1s infinite alternate;
+        }
+
+        #message {
+            margin: 0; /* Remove default margin */
+            font-size: 1.8em;
+            color: #333;
+            animation: fadeInUp 0.5s ease-in-out;
+        }
+
+        #winner-container {
+            padding: 10px;
+            margin-top: 20px;
+            text-align: center;
+            display: none; /* Initially hidden */
+        }
+
+        #reset, #difficulty-select {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border: none;
+            background-color: #ff4081;
+            color: white;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            width: 200px; 
+        }
+
+        #reset:hover, #difficulty-select:hover {
+            background-color: #e91e63; 
+            transform: scale(1.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        @keyframes winnerGlow {
+            from { box-shadow: 0 0 10px #ff5252; }
+            to { box-shadow: 0 0 20px #ff5252, 0 0 30px #ff5252; }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-container">
+        <h1>Tic Tac Toe</h1>
+    </div>
+    <div id="container">
+        <div id="board"></div>
+    </div>
+    <div class="message-container" id="winner-container">
+        <div id="message"></div> 
+    </div>
+    <button id="difficulty-select">Select Difficulty</button>
+    <button id="reset">Reset Game</button>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        const messageElement = document.getElementById('message');
+        const resetButton = document.getElementById('reset');
+        const difficultyButton = document.getElementById('difficulty-select');
+        const winnerContainer = document.getElementById('winner-container');
+        
+        let board = Array.from({ length: 3 }, () => Array(3).fill(0));
+        let difficulty = 'medium';  // Default difficulty
+    
+        difficultyButton.addEventListener('click', () => {
+            const difficultyLevels = ['beginner', 'medium', 'hard'];
+            const currentIndex = difficultyLevels.indexOf(difficulty);
+            difficulty = difficultyLevels[(currentIndex + 1) % difficultyLevels.length];
+            difficultyButton.textContent = `Difficulty: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`;
+        });
+    
+        function renderBoard(winningPositions) {
+            boardElement.innerHTML = '';
+            board.forEach((row, rowIndex) => {
+                row.forEach((cell, colIndex) => {
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'cell';
+                    cellDiv.textContent = cell === 1 ? 'X' : cell === 2 ? 'O' : '';
+                    if (winningPositions.some(pos => pos[0] === rowIndex && pos[1] === colIndex)) {
+                        cellDiv.classList.add('strike');
+                    }
+                    cellDiv.addEventListener('click', () => makeMove(rowIndex, colIndex));
+                    boardElement.appendChild(cellDiv);
+                });
+            });
+        }
+    
+        function makeMove(row, col) {
+            if (board[row][col] !== 0) return;
+    
+            fetch('/move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ board, row, col, difficulty }),  // Send difficulty level
+            })
+            .then(response => response.json())
+            .then(data => {
+                board = data.board;
+                renderBoard(data.winning_positions);
+    
+                if (data.game_over) {
+                    messageElement.textContent = data.winner === 1 ? 'Player wins!' : data.winner === 2 ? 'AI wins!' : 'It\'s a draw!';
+                    winnerContainer.style.display = 'block';
+                    
+                    setTimeout(resetGame, 2000);
+                } else {
+                    winnerContainer.style.display = 'none'; 
+                }
+            });
+        }
+    
+        function resetGame() {
+            board = Array.from({ length: 3 }, () => Array(3).fill(0));
+            messageElement.textContent = '';
+            winnerContainer.style.display = 'none';
+            renderBoard([]);
+        }
+    
+        resetButton.addEventListener('click', resetGame);
+    
+        // Initial render
+        renderBoard([]);
+    </script>
+    
+</body>
+</html>
